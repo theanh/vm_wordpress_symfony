@@ -1,0 +1,79 @@
+version: '2'
+
+services:
+  # es:
+  #   image: docker.elastic.co/elasticsearch/elasticsearch:5.6.4
+  #   environment:
+  #     - xpack.security.enabled=false
+  #   ports:
+  #     - 9200:9200
+
+  mysql:
+    image: mysql:5.7
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./mysql:/etc/mysql/conf.d
+    environment:
+      MYSQL_ROOT_PASSWORD: deadface
+
+  php:
+    build:
+      context: php7-fpm
+    ports:
+      - 9001:9000
+    user: "1000:1000"
+    links:
+      # - es
+      - mysql
+    volumes:
+      - ../api:/var/www/${HOST}
+      - ../wordpress:/var/www/${HOST_BLOG}
+      - ~/.ssh:/home/dummy/.ssh
+    environment:
+      PHP_XDEBUG_ENABLED: 1
+      XDEBUG_CONFIG: "remote_host=172.17.0.1"
+      PHP_IDE_CONFIG: "serverName=docker"
+
+  nginx:
+    build:
+      context: nginx
+      args:
+        - HOST=${HOST}
+        - HOST_BLOG=${HOST_BLOG}
+    ports:
+      - 80:80
+      - 443:443
+      - 8181:8181
+    links:
+      - php
+    volumes_from:
+      - php
+    volumes:
+      - /etc/ssl:/etc/nginx/ssl
+      - ./nginx/conf:/etc/nginx/snippets
+  # fe-admin:
+  #   build:
+  #     context: yarn
+  #     args:
+  #       PORT: 3000
+  #   ports:
+  #     - 3000:3000
+  #   volumes:
+  #     - ../frontend/admin:/usr/src/app/front-end
+  #     - ~/.ssh/id_rsa:/root/.ssh/id_rsa
+  #     - ~/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub
+  #     - ~/.ssh/known_hosts:/root/.ssh/known_hosts
+
+  # webapp:
+  #   build:
+  #     context: yarn
+  #     args:
+  #       PORT: 3000
+  #   ports:
+  #     - 3001:3000
+  #   volumes:
+  #     - ../frontend/webapp:/usr/src/app/front-end
+  #     - ~/.ssh/id_rsa:/root/.ssh/id_rsa
+  #     - ~/.ssh/id_rsa.pub:/root/.ssh/id_rsa.pub
+  #     - ~/.ssh/known_hosts:/root/.ssh/known_hosts
